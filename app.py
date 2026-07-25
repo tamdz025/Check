@@ -3,7 +3,7 @@ import time
 import json
 
 BOT_TOKEN = '8893681330:AAHSsMArvUSvwTXxbjDBxEzhKNW74Zb-_FE'
-DOMAIN = 'https://xacthuckey.x10.mx'
+DOMAIN = 'https://xacthuckey.x10.mx/0.html'
 
 def send_message(chat_id, text, keyboard=None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
