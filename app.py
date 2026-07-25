@@ -1,51 +1,46 @@
-import requests
-import time
-import json
+import logging
+from telegram import KeyboardButton, ReplyKeyboardMarkup, Update, WebAppInfo
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-BOT_TOKEN = '8893681330:AAHSsMArvUSvwTXxbjDBxEzhKNW74Zb-_FE'
-DOMAIN = 'https://xacthuckey.x10.mx/0.html'
+# --- CẤU HÌNH ---
+BOT_TOKEN = "8893681330:AAHSsMArvUSvwTXxbjDBxEzhKNW74Zb-_FE" # Thay YOUR_BOT_TOKEN bằng token bạn nhận được từ BotFather
+WEB_APP_URL = "https://xacthuckey.x10.mx/0.html" # URL website của bạn
 
-def send_message(chat_id, text, keyboard=None):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {'chat_id': chat_id, 'text': text}
-    if keyboard:
-        data['reply_markup'] = json.dumps(keyboard)
-    
-    try:
-        response = requests.post(url, data=data)
-        return response.json()
-    except Exception as e:
-        print(f"Lỗi: {e}")
-        return None
+# Bật log để dễ theo dõi
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-print("🤖 Bot đang chạy (Polling mode)...")
-offset = 0
+# --- HÀM XỬ LÝ LỆNH /start ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Gửi tin nhắn với nút bấm mở Web App."""
+    # Tạo nút bấm với thuộc tính web_app
+    button = KeyboardButton(
+        text="🚀 Mở TaskHub",
+        web_app=WebAppInfo(url=WEB_APP_URL) # Gán URL Mini App của bạn vào đây
+    )
+    # Tạo bàn phím và gắn nút bấm vào
+    reply_markup = ReplyKeyboardMarkup.from_button(button)
 
-while True:
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-        response = requests.get(url, params={'offset': offset, 'timeout': 30})
-        data = response.json()
-        
-        if data['ok']:
-            for update in data['result']:
-                if 'message' in update:
-                    chat_id = update['message']['chat']['id']
-                    text = update['message'].get('text', '')
-                    
-                    if text == '/start':
-                        keyboard = {
-                            'inline_keyboard': [
-                                [{'text': '🚀 Mở TaskHub', 'web_app': {'url': DOMAIN}}]
-                            ]
-                        }
-                        send_message(chat_id, "🤖 Chào mừng! Nhấn nút bên dưới:", keyboard)
-                    else:
-                        send_message(chat_id, "🤖 Gửi /start để bắt đầu!")
-                    
-                    offset = update['update_id'] + 1
-        
-        time.sleep(2)
-    except Exception as e:
-        print(f"Lỗi: {e}")
-        time.sleep(5)
+    # Gửi tin nhắn kèm nút bấm
+    await update.message.reply_text(
+        "Chào bạn! Nhấn nút bên dưới để mở TaskHub:",
+        reply_markup=reply_markup,
+    )
+
+# --- HÀM CHÍNH CHẠY BOT ---
+def main() -> None:
+    """Khởi chạy bot."""
+    # Tạo ứng dụng và truyền Token của bot vào
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    # Đăng ký handler cho lệnh /start
+    application.add_handler(CommandHandler("start", start))
+
+    # Bắt đầu chạy bot (polling)
+    print("Bot đang chạy...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    main()
