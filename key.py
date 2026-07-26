@@ -42,3 +42,6 @@ except Exception as e:
         "message": str(e)
     }
     print(json.dumps(error_output, indent=2, ensure_ascii=False))
+
+# ⚠️ THÊM DÒNG NÀY ĐỂ GIỮ APP CHẠY
+input("Press Enter to exit...")
