@@ -5,44 +5,96 @@ import string
 
 app = Flask(__name__)
 
-@app.route('/')
-def shorten():
+def generate_key():
     # Tạo key ngẫu nhiên với 10 số và hậu tố -NekitAOV
     random_digits = ''.join(random.choices(string.digits, k=10))
-    key = f"{random_digits}-NekitAOV"
-    
-    # URL đích với key ngẫu nhiên
+    return f"{random_digits}-NekitAOV"
+
+@app.route('/')
+def shorten_all():
+    key = generate_key()
     destination_url = f"kiemtiennekit.x10.mx/index.html?key={key}"
     
-    # API token và URL
-    api_token = '651fb4c5caa16041376bd31a'
-    api_url = f"https://link4m.co/api-shorten/v2?api={api_token}&url={destination_url}"
+    # API thứ nhất - Link4m
+    api_token_1 = '651fb4c5caa16041376bd31a'
+    api_url_1 = f"https://link4m.co/api-shorten/v2?api={api_token_1}&url={destination_url}"
+    
+    # API thứ hai - Bbmkts
+    api_token_2 = '5c887cbed449b6c07992e454'
+    api_url_2 = f"https://bbmkts.com/dapi?token={api_token_2}&longurl={destination_url}"
+    
+    # Khởi tạo kết quả
+    results = []
     
     try:
-        # Gửi request tới API
-        response = requests.get(api_url)
-        result = response.json()
+        # Gửi request tới Link4m
+        try:
+            response_1 = requests.get(api_url_1)
+            result_1 = response_1.json()
+            
+            link4m_result = {
+                "status": result_1.get("status"),
+                "service": "link4m",
+                "original_url": destination_url,
+                "key": key,
+                "shortened_url": result_1.get("shortenedUrl") if result_1.get("status") == 'success' else None,
+                "message": result_1.get("message", "Unknown error") if result_1.get("status") != 'success' else "Success"
+            }
+            results.append(link4m_result)
+        except Exception as e:
+            results.append({
+                "status": "error",
+                "service": "link4m",
+                "original_url": destination_url,
+                "key": key,
+                "shortened_url": None,
+                "message": str(e)
+            })
         
-        # Tạo response JSON
-        output = {
-            "status": result.get("status"),
-            "original_url": destination_url,
-            "key": key,
-            "shortened_url": result.get("shortenedUrl") if result.get("status") == 'success' else None,
-            "message": result.get("message", "Unknown error") if result.get("status") != 'success' else "Success"
-        }
+        # Gửi request tới Bbmkts
+        try:
+            response_2 = requests.get(api_url_2)
+            result_2 = response_2.json()
+            
+            bbmkts_result = {
+                "status": "success" if result_2.get("status") == "success" else "error",
+                "service": "bbmkts",
+                "original_url": destination_url,
+                "key": key,
+                "shortened_url": result_2.get("short_url") if result_2.get("status") == "success" else None,
+                "message": result_2.get("msg", "Unknown error") if result_2.get("status") != "success" else "Success"
+            }
+            results.append(bbmkts_result)
+        except Exception as e:
+            results.append({
+                "status": "error",
+                "service": "bbmkts",
+                "original_url": destination_url,
+                "key": key,
+                "shortened_url": None,
+                "message": str(e)
+            })
         
-        return jsonify(output)
+        # Trả về danh sách kết quả
+        return jsonify(results)
         
     except Exception as e:
-        # Trả về JSON lỗi
-        error_output = {
+        # Trả về JSON lỗi tổng thể
+        error_output = [{
             "status": "error",
+            "service": "link4m",
             "original_url": destination_url,
             "key": key,
             "shortened_url": None,
-            "message": str(e)
-        }
+            "message": "Service unavailable"
+        }, {
+            "status": "error",
+            "service": "bbmkts",
+            "original_url": destination_url,
+            "key": key,
+            "shortened_url": None,
+            "message": "Service unavailable"
+        }]
         return jsonify(error_output)
 
 if __name__ == '__main__':
